@@ -48,7 +48,7 @@ Before running anything:
 cd BD_Project
 ```
 
-✅ Now you are inside the main project folder.
+ Now you are inside the main project folder.
 
 ---
 
@@ -96,7 +96,7 @@ Finally, run the generated streaming code:
 python3 stream.py
 ```
 
-✅ This will:
+ This will:
 - Start reading the CSV files inside `stream_input/` folder **one by one**.
 - Apply the same transformation logic (filtering and grouping).
 - Output results **directly on the console** batch-by-batch.
