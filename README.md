@@ -16,7 +16,7 @@ Follow these simple steps to set up and run the project on your local machine.
 
 ---
 
-## 🛠️ Step 1: Clone the Repository
+##  Step 1: Clone the Repository
 
 ```bash
 git clone <your-repository-link-here>
@@ -26,13 +26,13 @@ git clone <your-repository-link-here>
 
 ---
 
-## 🛠️ Step 2: Open the Project in VS Code
+##  Step 2: Open the Project in VS Code
 
 - Open the cloned repository folder inside **Visual Studio Code** (or your preferred code editor).
 
 ---
 
-## 🛠️ Step 3: Delete Old Output Files
+##  Step 3: Delete Old Output Files
 
 Before running anything:
 - **Delete** the `batch_output` folder  
@@ -42,7 +42,7 @@ Before running anything:
 
 ---
 
-## 🛠️ Step 4: Enter into Project Directory
+##  Step 4: Enter into Project Directory
 
 ```bash
 cd BD_Project
@@ -52,7 +52,7 @@ cd BD_Project
 
 ---
 
-## 🛠️ Step 5: Install Required Python Libraries
+##  Step 5: Install Required Python Libraries
 
 ```bash
 pip3 install -r requirements.txt
@@ -62,7 +62,7 @@ This will install necessary packages like `pyspark`, `astor`, etc.
 
 ---
 
-## 🛠️ Step 6: Run the Batch Processing Code
+##  Step 6: Run the Batch Processing Code
 
 ```bash
 python3 batch.py
@@ -74,7 +74,7 @@ python3 batch.py
 
 ---
 
-## 🛠️ Step 7: Generate the Stream Processing Code
+##  Step 7: Generate the Stream Processing Code
 
 Now run:
 
@@ -88,7 +88,7 @@ python3 ast_converter.py batch.py
 
 ---
 
-## 🛠️ Step 8: Verify the Generated Stream Code
+##  Step 8: Verify the Generated Stream Code
 
 Finally, run the generated streaming code:
 
