@@ -157,7 +157,7 @@ schema = StructType([
 # Footer
 stream_footer = '\nquery.awaitTermination()\n'
 
-# Final assembly
+# Final assembly..
 final_code = stream_header + "\n" + stream_logic + stream_footer
 
 with open("stream.py", "w") as f:
