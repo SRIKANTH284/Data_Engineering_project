@@ -19,7 +19,7 @@ Follow these simple steps to set up and run the project on your local machine.
 ##  Step 1: Clone the Repository
 
 ```bash
-git clone <https://github.com/NeeleshSamptur/BD_Project.git>
+git clone https://github.com/NeeleshSamptur/BD_Project.git
 ```
 
 *(Replace `<your-repository-link-here>` with the actual GitHub URL when you upload.)*
