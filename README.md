@@ -22,7 +22,7 @@ Follow these simple steps to set up and run the project on your local machine.
 git clone <your-repository-link-here>
 ```
 
-*(Replace `<your-repository-link-here>` with the actual GitHub URL when you upload.)*
+*(Replace `https://github.com/NeeleshSamptur/BD_Project.git` with the actual GitHub URL when you upload.)*
 
 ---
 
