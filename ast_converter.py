@@ -1,57 +1,3 @@
-# import argparse
-
-# # Step 1: Parse command-line argument
-# parser = argparse.ArgumentParser(description="Convert batch Spark code to streaming Spark code.")
-# parser.add_argument("input_file", help="Path to batch Python file (batch.py)")
-# args = parser.parse_args()
-
-# # Step 2: Read batch.py
-# with open(args.input_file, "r") as file:
-#     batch_code = file.read()
-
-# # Step 3: Build fixed stream.py
-# stream_py_code = """
-# from pyspark.sql import SparkSession
-# from pyspark.sql.functions import col
-# from pyspark.sql.types import StructType, StructField, StringType, DoubleType
-
-# # Initialize Spark session
-# spark = SparkSession.builder.appName("StreamingProcessingExample").getOrCreate()
-
-# # Define schema
-# schema = StructType([
-#     StructField("id", StringType(), True),
-#     StructField("category", StringType(), True),
-#     StructField("value", StringType(), True)
-# ])
-
-# # Read streaming data
-# df_stream_raw = spark.readStream.option("header", True).option("maxFilesPerTrigger", 1).schema(schema).csv("stream_input/")
-
-# # Select and cast
-# df_stream = df_stream_raw.select(
-#     col("category"),
-#     col("value").cast("double")
-# )
-
-# # Apply transformations
-# df_filtered = df_stream.filter(col('value') > 50)
-# df_grouped = df_filtered.groupBy("category").count()
-
-# # Write output to console
-# query = df_grouped.writeStream.outputMode("complete").format("console").start()
-# query.awaitTermination()
-# """
-
-# # Step 4: Save stream.py
-# with open("stream.py", "w") as file:
-#     file.write(stream_py_code)
-
-# print("✅ Correct stream.py generated successfully!")
-
-
-
-
 import ast
 import astor
 import argparse
@@ -94,19 +40,29 @@ class BatchToStreamTransformer(ast.NodeTransformer):
                     keywords=[]
                 )
                 node.value = read_node
+                
         return node
 
     def visit_Expr(self, node):
         # Detect and replace df.write.csv(...) as an expression
-        if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute):
-            if node.value.func.attr == 'csv':
-                # Correct base: df_grouped.writeStream (not callable!)
+        if isinstance(node.value, ast.Call):
+            # Check if this is a write operation
+            if (isinstance(node.value.func, ast.Attribute) and 
+                node.value.func.attr == 'csv' and 
+                isinstance(node.value.func.value, ast.Attribute) and 
+                node.value.func.value.attr == 'write'):
+                
+                # Get the dataframe name
+                df_name = node.value.func.value.value.id
+                
+                # Create the streaming write operation
                 write_stream_base = ast.Attribute(
-                    value=ast.Name(id='df_grouped', ctx=ast.Load()),
+                    value=ast.Name(id=df_name, ctx=ast.Load()),
                     attr='writeStream',
                     ctx=ast.Load()
                 )
 
+                # Build the streaming query
                 query_node = ast.Call(
                     func=ast.Attribute(value=write_stream_base, attr='outputMode', ctx=ast.Load()),
                     args=[ast.Str(s='complete')], keywords=[]
@@ -120,10 +76,25 @@ class BatchToStreamTransformer(ast.NodeTransformer):
                     args=[], keywords=[]
                 )
 
-                return ast.Assign(
+                # Create a list of statements: the query assignment and awaitTermination
+                query_assign = ast.Assign(
                     targets=[ast.Name(id='query', ctx=ast.Store())],
                     value=query_node
                 )
+                
+                await_termination = ast.Expr(
+                    value=ast.Call(
+                        func=ast.Attribute(
+                            value=ast.Name(id='query', ctx=ast.Load()),
+                            attr='awaitTermination',
+                            ctx=ast.Load()
+                        ),
+                        args=[],
+                        keywords=[]
+                    )
+                )
+                
+                return [query_assign, await_termination]
         return node
 
 # ===== MAIN EXECUTION =====
@@ -140,27 +111,7 @@ transformer = BatchToStreamTransformer()
 transformed_tree = transformer.visit(tree)
 stream_logic = astor.to_source(transformed_tree)
 
-# Header for streaming
-stream_header = '''from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType
-
-spark = SparkSession.builder.appName("StreamingProcessingExample").getOrCreate()
-
-schema = StructType([
-    StructField("id", StringType(), True),
-    StructField("category", StringType(), True),
-    StructField("value", StringType(), True)
-])
-'''
-
-# Footer
-stream_footer = '\nquery.awaitTermination()\n'
-
-# Final assembly..
-final_code = stream_header + "\n" + stream_logic + stream_footer
-
 with open("stream.py", "w") as f:
-    f.write(final_code)
+    f.write(stream_logic)
 
-print("✅ Final working stream.py generated successfully!")
+print("Final working stream.py generated successfully!")
