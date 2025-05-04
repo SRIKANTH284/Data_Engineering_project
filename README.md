@@ -117,12 +117,10 @@ BD_Project/
 ├── batch_input/
 │   └── data.csv
 ├── batch_output/   (auto-generated after running batch.py)
-├── stream_input/
-│   ├── data1.csv
-│   ├── data2.csv
-│   ├── data3.csv
-│   └── data4.csv
+├── stream_input/   (copy data1.csv and data2.csv into this directory to simulate stream data)
 ├── batch.py
+├── data1.csv
+├── data2.csv
 ├── ast_converter.py
 ├── stream.py  (auto-generated after running ast_converter.py)
 ├── requirements.txt
