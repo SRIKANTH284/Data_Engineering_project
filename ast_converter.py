@@ -7,98 +7,129 @@ class BatchToStreamTransformer(ast.NodeTransformer):
         super().__init__()
         self.df_name = None
 
+    def visit_Module(self, node):
+        # Add StreamingContext import
+        streaming_import = ast.ImportFrom(
+            module='pyspark.streaming',
+            names=[ast.alias(name='StreamingContext', asname=None)],
+            level=0
+        )
+        node.body.insert(0, streaming_import)
+        return self.generic_visit(node)
+
     def visit_Assign(self, node):
-        if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute):
-            if node.value.func.attr == "csv":
-                self.df_name = node.targets[0].id
+        # Add StreamingContext after sparkContext
+        if (isinstance(node.value, ast.Attribute) and 
+            node.value.attr == 'sparkContext' and
+            isinstance(node.value.value, ast.Name) and
+            node.value.value.id == 'spark'):
+            
+            ssc_assign = ast.Assign(
+                targets=[ast.Name(id='ssc', ctx=ast.Store())],
+                value=ast.Call(
+                    func=ast.Name(id='StreamingContext', ctx=ast.Load()),
+                    args=[
+                        ast.Name(id='sc', ctx=ast.Load()),
+                        ast.Num(n=5)
+                    ],
+                    keywords=[]
+                )
+            )
+            return [node, ssc_assign]
 
-                # Use spark.readStream instead of spark.read
-                read_stream_base = ast.Attribute(
-                    value=ast.Name(id='spark', ctx=ast.Load()),
-                    attr='readStream',
+        # Change textFile to textFileStream and target to lines
+        if isinstance(node.value, ast.Call) and node.value.func.attr == "textFile":
+            node.value.func.value = ast.Name(id='ssc', ctx=ast.Load())
+            node.value.func.attr = "textFileStream"
+            node.value.args = [ast.Str(s='stream_input/')]
+            node.targets = [ast.Name(id='lines', ctx=ast.Store())]
+            return node
+
+        # Convert the processing chain to streaming
+        if isinstance(node.targets[0], ast.Name) and node.targets[0].id == "rdd_filtered":
+            # Create the streaming processing chain
+            processing_chain = ast.Call(
+                func=ast.Attribute(
+                    value=ast.Name(id='lines', ctx=ast.Load()),
+                    attr='foreachRDD',
                     ctx=ast.Load()
-                )
+                ),
+                args=[
+                    ast.Lambda(
+                        args=ast.arguments(
+                            args=[ast.arg(arg='rdd', annotation=None)],
+                            vararg=None,
+                            kwonlyargs=[],
+                            kw_defaults=[],
+                            kwarg=None,
+                            defaults=[]
+                        ),
+                        body=ast.Call(
+                            func=ast.Attribute(
+                                value=node.value,
+                                attr='foreach',
+                                ctx=ast.Load()
+                            ),
+                            args=[
+                                ast.Lambda(
+                                    args=ast.arguments(
+                                        args=[ast.arg(arg='result', annotation=None)],
+                                        vararg=None,
+                                        kwonlyargs=[],
+                                        kw_defaults=[],
+                                        kwarg=None,
+                                        defaults=[]
+                                    ),
+                                    body=ast.Call(
+                                        func=ast.Name(id='print', ctx=ast.Load()),
+                                        args=[ast.Name(id='result', ctx=ast.Load())],
+                                        keywords=[]
+                                    )
+                                )
+                            ],
+                            keywords=[]
+                        )
+                    )
+                ],
+                keywords=[]
+            )
+            return ast.Expr(value=processing_chain)
 
-                read_node = ast.Call(
-                    func=ast.Attribute(value=read_stream_base, attr='option', ctx=ast.Load()),
-                    args=[ast.Str(s='header'), ast.NameConstant(value=True)],
-                    keywords=[]
-                )
-                read_node = ast.Call(
-                    func=ast.Attribute(value=read_node, attr='option', ctx=ast.Load()),
-                    args=[ast.Str(s='maxFilesPerTrigger'), ast.Str(s='1')],
-                    keywords=[]
-                )
-                read_node = ast.Call(
-                    func=ast.Attribute(value=read_node, attr='schema', ctx=ast.Load()),
-                    args=[ast.Name(id='schema', ctx=ast.Load())],
-                    keywords=[]
-                )
-                read_node = ast.Call(
-                    func=ast.Attribute(value=read_node, attr='csv', ctx=ast.Load()),
-                    args=[ast.Str(s='stream_input/')],
-                    keywords=[]
-                )
-                node.value = read_node
-                
+            
         return node
 
     def visit_Expr(self, node):
-        # Detect and replace df.write.csv(...) as an expression
-        if isinstance(node.value, ast.Call):
-            # Check if this is a write operation
-            if (isinstance(node.value.func, ast.Attribute) and 
-                node.value.func.attr == 'csv' and 
-                isinstance(node.value.func.value, ast.Attribute) and 
-                node.value.func.value.attr == 'write'):
-                
-                # Get the dataframe name
-                df_name = node.value.func.value.value.id
-                
-                # Create the streaming write operation
-                write_stream_base = ast.Attribute(
-                    value=ast.Name(id=df_name, ctx=ast.Load()),
-                    attr='writeStream',
-                    ctx=ast.Load()
+        # Replace saveAsTextFile with start and awaitTermination
+        if isinstance(node.value, ast.Call) and node.value.func.attr == "saveAsTextFile":
+            start_call = ast.Expr(
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id='ssc', ctx=ast.Load()),
+                        attr='start',
+                        ctx=ast.Load()
+                    ),
+                    args=[],
+                    keywords=[]
                 )
-
-                # Build the streaming query
-                query_node = ast.Call(
-                    func=ast.Attribute(value=write_stream_base, attr='outputMode', ctx=ast.Load()),
-                    args=[ast.Str(s='complete')], keywords=[]
+            )
+            
+            await_call = ast.Expr(
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id='ssc', ctx=ast.Load()),
+                        attr='awaitTermination',
+                        ctx=ast.Load()
+                    ),
+                    args=[],
+                    keywords=[]
                 )
-                query_node = ast.Call(
-                    func=ast.Attribute(value=query_node, attr='format', ctx=ast.Load()),
-                    args=[ast.Str(s='console')], keywords=[]
-                )
-                query_node = ast.Call(
-                    func=ast.Attribute(value=query_node, attr='start', ctx=ast.Load()),
-                    args=[], keywords=[]
-                )
-
-                # Create a list of statements: the query assignment and awaitTermination
-                query_assign = ast.Assign(
-                    targets=[ast.Name(id='query', ctx=ast.Store())],
-                    value=query_node
-                )
-                
-                await_termination = ast.Expr(
-                    value=ast.Call(
-                        func=ast.Attribute(
-                            value=ast.Name(id='query', ctx=ast.Load()),
-                            attr='awaitTermination',
-                            ctx=ast.Load()
-                        ),
-                        args=[],
-                        keywords=[]
-                    )
-                )
-                
-                return [query_assign, await_termination]
+            )
+            
+            return [start_call, await_call]  # Replace the saveAsTextFile line with these two calls
+            
         return node
 
 # ===== MAIN EXECUTION =====
-
 parser = argparse.ArgumentParser(description="Convert batch.py to stream.py using AST")
 parser.add_argument("input_file", help="Path to batch.py")
 args = parser.parse_args()

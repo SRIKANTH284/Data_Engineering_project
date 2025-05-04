@@ -1,9 +1,11 @@
+from pyspark.streaming import StreamingContext
 from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName('Example').getOrCreate()
-schema = spark.read.option('header', True).csv('batch_input/data.csv').schema
-df_batch = spark.readStream.option('header', True).option('maxFilesPerTrigger',
-    '1').schema(schema).csv('stream_input/')
-df_filtered = df_batch.filter(df_batch['value'] > 50)
-df_grouped = df_filtered.groupBy('category').count()
-query = df_grouped.writeStream.outputMode('complete').format('console').start()
-query.awaitTermination()
+spark = SparkSession.builder.appName('ExampleRDD').getOrCreate()
+sc = spark.sparkContext
+ssc = StreamingContext(sc, 5)
+lines = ssc.textFileStream('stream_input/')
+lines.foreachRDD(lambda rdd: rdd.map(lambda line: line.split(',')).filter(
+    lambda fields: int(fields[2]) > 50).map(lambda fields: (fields[1], 1)).
+    reduceByKey(lambda x, y: x + y).foreach(lambda result: print(result)))
+ssc.start()
+ssc.awaitTermination()
