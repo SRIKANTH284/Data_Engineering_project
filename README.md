@@ -96,10 +96,22 @@ Finally, run the generated streaming code:
 python3 stream.py
 ```
 
+---
+
+##  Step 9: Copy CSVs from the project directory into the stream input to simulate stream data 
+
+Finally, open a new terminal and run this command to copy CSVs
+
+```bash
+cp data1.csv stream_input/data1.csv
+cp data2.csv stream_input/data2.csv
+```
+
  This will:
 - Start reading the CSV files inside `stream_input/` folder **one by one**.
 - Apply the same transformation logic (filtering and grouping).
 - Output results **directly on the console** batch-by-batch.
+- 
 
 ---
   
