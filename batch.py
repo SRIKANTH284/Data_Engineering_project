@@ -10,7 +10,7 @@ sc = spark.sparkContext
 rdd = sc.textFile("batch_input/data.csv")
 
 #apply series of transformation
-# Split by comma, filter and map
+# Split by comma
 #filter rows where 3rd column index2 >50
 #create (k,1) pairs using 2nd column index 1 - counting
 # reduce by key to count total occurrences per key
