@@ -98,7 +98,7 @@ python3 stream.py
 
 ---
 
-##  Step 9: Copy CSVs from the project directory into the stream input to simulate stream data 
+##  Step 9: Copy CSVs from the project directory into the stream input directory to simulate stream data 
 
 Finally, open a new terminal and run this command to copy CSVs
 
