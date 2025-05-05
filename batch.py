@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 
 # Initialize Spark session and context
 spark = SparkSession.builder.appName("ExampleRDD").getOrCreate()
-#work with RDDs
+#SparkContext to work with RDDs
 sc = spark.sparkContext
 
 # Read input CSV as raw text RDD(each line is string)
