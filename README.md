@@ -45,7 +45,7 @@ Before running anything:
 ##  Step 4: Enter into Project Directory
 
 ```bash
-cd BD_Project
+cd Data_Engineering_project
 ```
 
  Now you are inside the main project folder.
@@ -125,7 +125,7 @@ cp data2.csv stream_input/data2.csv
 # Project Structure
 
 ```
-BD_Project/
+Data_Engineering_project/
 ├── batch_input/
 │   └── data.csv
 ├── batch_output/   (auto-generated after running batch.py)
